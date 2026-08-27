@@ -1,3 +1,4 @@
+const { put } = require("@vercel/blob");
 const pool = require("../../db/db");
 
 const createJoke = async (req, res) => {
@@ -26,10 +27,16 @@ const createJoke = async (req, res) => {
       return res.status(400).json({ message: "At least one recipient is required" });
     }
 
-    const fileUrl = req.file
-      ? `${req.protocol}://${req.get("host")}/uploads/jokes/${req.file.filename}`
-      : null;
-    const fileType = req.file ? req.file.mimetype : null;
+    let fileUrl = null;
+    let fileType = null;
+    if (req.file) {
+      const blob = await put(`jokes/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
+        access: "public",
+        contentType: req.file.mimetype,
+      });
+      fileUrl = blob.url;
+      fileType = req.file.mimetype;
+    }
 
     const result = await pool.query(
       `INSERT INTO jokes (sender_id, recipients, text, file_url, file_type) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
